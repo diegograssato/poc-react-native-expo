@@ -1,11 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 
-import WebViewExample from './web_view_example.js';
+import UserLocation from './UserLocation';
 
 const App = () => {
 
    return (
-      <WebViewExample/>
+        <UserLocation />
    )
 }
 
