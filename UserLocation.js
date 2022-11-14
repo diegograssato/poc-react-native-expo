@@ -1,23 +1,25 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, AsyncStorage } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { WebView } from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOCATION_TRACKING = 'location-tracking';
-
+const STORAGE_KEY="@StorageLocationTracking"
 
 async function onLocation(position) {
     console.log(position);
     if(position){
-        let baseURL = `https://dtux-lab-08.free.beeceptor.com?lat=${position.coords.latitude}&long=${position.coords.longitude}`
+        let baseURL = `https://dtux-lab-09.free.beeceptor.com?lat=${position.coords.latitude}&long=${position.coords.longitude}`
         const response = await fetch(baseURL);
     }
 }
 
 function UserLocation() {
+
 const [locationStarted, setLocationStarted] = React.useState(false);
-const startLocationTracking = async () => {
+    const startLocationTracking = async () => {
         await Location.startLocationUpdatesAsync(LOCATION_TRACKING, {
             accuracy: Location.Accuracy.Highest,
             timeInterval: 6000,
@@ -30,6 +32,7 @@ const startLocationTracking = async () => {
 
         console.log('tracking started?', hasStarted);
     };
+
 React.useEffect(() => {
         const config = async () => {
             let resf = await Location.requestForegroundPermissionsAsync();
@@ -40,26 +43,41 @@ React.useEffect(() => {
                 console.log('Permission to access location granted');
             }
         };
-config();
-    }, []);
-const startLocation = () => {
-        startLocationTracking();
-    }
+
+    config();
+}, []);
 
 async function handleEvents(event) {
-    let eventObj = JSON.parse(event.nativeEvent.data)
+    console.log("=============== handleEvents =================");
+    const responseBody = JSON.parse(event.nativeEvent.data)
 
-//        await AsyncStorage.setItem(
-//          '@Armando:key',eventObj
-//        );
+    switch (responseBody.event) {
+        case 'onLogin':
+            console.log(`On login`);
+            console.log(JSON.stringify(responseBody.data));
+            startLocationTracking();
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(responseBody.data));
+            break;
 
-    startLocationTracking();
-    console.log(eventObj);
-//    const value = await AsyncStorage.getItem('@Armando:key');
-//    if (value !== null) {
-//      // We have data!!
-//      console.log(value);
-//    }
+        case 'onLogout':
+            console.log(`On ${responseBody.data}.`);
+               const value = await AsyncStorage.getItem(STORAGE_KEY)
+               if(value !== null) {
+                  console.log("----------------------------------------------------");
+                  const eventObj = JSON.parse(value)
+                  console.log(eventObj)
+                  console.log("----------------------------------------------------");
+              }
+            stopLocation();
+            await AsyncStorage.removeItem(STORAGE_KEY);
+
+        break;
+
+      default:
+        console.log(`Sorry, we are out of ${responseBody.event}.`);
+    }
+
+
 }
 const stopLocation = () => {
         setLocationStarted(false);
@@ -73,12 +91,16 @@ const stopLocation = () => {
 return (
         <View style = {styles.container}>
                 <WebView
-                 scalesPageToFit={false}
+//                style={{
+//                  flex: 1,
+//                  margin: 60,
+//                }}
+                 scalesPageToFit={true}
                  mixedContentMode="compatibility"
-               onMessage={async (event) => {
-                     handleEvents(event)
-                  }}
-                source = {{ uri: 'https://4db4-177-55-157-202.sa.ngrok.io' }}
+              onMessage={async (event) => {
+                                   handleEvents(event)
+                                }}
+                source = {{ uri: 'http://10.22.0.66:4200' }}
                 javaScriptEnabledAndroid
                 useWebkit
                 startInLoadingState={true}
