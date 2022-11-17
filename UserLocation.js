@@ -1,132 +1,221 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  ActivityIndicator,
+  AppState,
+} from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 const LOCATION_TRACKING = 'location-tracking';
-const STORAGE_KEY="@StorageLocationTracking"
-
-async function onLocation(position) {
-    console.log(position);
-    if(position){
-        let baseURL = `https://dtux-lab-09.free.beeceptor.com?lat=${position.coords.latitude}&long=${position.coords.longitude}`
-        const response = await fetch(baseURL);
-    }
-}
+const URL_LOCATION_TRACKING = 'https://dtux-lab-15.free.beeceptor.com';
+const URL_WEBVIEW_LOCATION = 'http://10.22.0.66:4200';
+const STORAGE_KEY = '@StorageLocationTracking';
 
 function UserLocation() {
+  const appState = useRef(AppState.currentState);
+  
+  const startLocationTracking = async () => {
+    console.log('[startLocationTracking]');
 
-const [locationStarted, setLocationStarted] = React.useState(false);
-    const startLocationTracking = async () => {
-        await Location.startLocationUpdatesAsync(LOCATION_TRACKING, {
-            accuracy: Location.Accuracy.Highest,
-            timeInterval: 6000,
-            distanceInterval: 0,
-        });
-        const hasStarted = await Location.hasStartedLocationUpdatesAsync(
-            LOCATION_TRACKING
-        );
-        setLocationStarted(hasStarted);
+    await Location.startLocationUpdatesAsync(LOCATION_TRACKING, {
+      accuracy: Location.Accuracy.Highest,
+      timeInterval: 10000,
+      distanceInterval: 0,
+      foregroundService: {
+        notificationColor: '#009edb',
+        notificationTitle: 'Using your location',
+        notificationBody:
+          'Para desligar, volte ao aplicativo e desligue alguma coisa.',
+      },
+    });
 
-        console.log('tracking started?', hasStarted);
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(
+      LOCATION_TRACKING
+    );
+
+    //setLocationStarted(hasStarted);
+    console.log('tracking started?', hasStarted);
+  };
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      _handleAppStateChange
+    );
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+  useEffect(() => {
+    const config = async () => {
+      let resf = await Location.requestForegroundPermissionsAsync();
+      let resb = await Location.requestBackgroundPermissionsAsync();
+      if (resf.status != 'granted' && resb.status !== 'granted') {
+        console.log('Permission to access location was denied');
+      } else {
+        console.log('Permission to access location granted');
+      }
     };
 
-React.useEffect(() => {
-        const config = async () => {
-            let resf = await Location.requestForegroundPermissionsAsync();
-            let resb = await Location.requestBackgroundPermissionsAsync();
-            if (resf.status != 'granted' && resb.status !== 'granted') {
-                console.log('Permission to access location was denied');
-            } else {
-                console.log('Permission to access location granted');
-            }
-        };
-
     config();
-}, []);
+  }, []);
+  const _handleAppStateChange = async (nextAppState) => {
+    if (
+      appState.current.match(/inactive|background/) &&
+      nextAppState === 'active'
+    ) {
+      console.log('App has come to the foreground!');
+    }
 
-async function handleEvents(event) {
-    console.log("=============== handleEvents =================");
-    const responseBody = JSON.parse(event.nativeEvent.data)
+    appState.current = nextAppState;
+    console.log('AppState', appState.current);
+  };
+
+  async function handleEvents(event) {
+    console.log('\n[handleEvents]');
+    const responseBody = JSON.parse(event.nativeEvent.data);
 
     switch (responseBody.event) {
-        case 'onLogin':
-            console.log(`On login`);
-            console.log(JSON.stringify(responseBody.data));
-            startLocationTracking();
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(responseBody.data));
-            break;
+      case 'onLogin':
+        startLocationTracking();
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(responseBody.data)
+        );
+        onStateTracking('login');
+        break;
 
-        case 'onLogout':
-            console.log(`On ${responseBody.data}.`);
-               const value = await AsyncStorage.getItem(STORAGE_KEY)
-               if(value !== null) {
-                  console.log("----------------------------------------------------");
-                  const eventObj = JSON.parse(value)
-                  console.log(eventObj)
-                  console.log("----------------------------------------------------");
-              }
-            stopLocation();
-            await AsyncStorage.removeItem(STORAGE_KEY);
+      case 'onLogout':
+        console.log('[handleEvents] Event Logout');
+        const value = await AsyncStorage.getItem(STORAGE_KEY);
+        if (value !== null) {
+          console.log('----------------------------------------------------');
+          const eventObj = JSON.parse(value);
+          console.log(eventObj);
+          console.log('----------------------------------------------------');
+        }
+
+        stopLocation();
+        onStateTracking('logout');
+        await AsyncStorage.removeItem(STORAGE_KEY);
 
         break;
 
       default:
         console.log(`Sorry, we are out of ${responseBody.event}.`);
     }
+  }
 
+  const stopLocation = () => {
+    TaskManager.isTaskRegisteredAsync(LOCATION_TRACKING).then((tracking) => {
+      if (tracking) {
+        Location.stopLocationUpdatesAsync(LOCATION_TRACKING);
+      }
+    });
+  };
 
-}
-const stopLocation = () => {
-        setLocationStarted(false);
-        TaskManager.isTaskRegisteredAsync(LOCATION_TRACKING)
-            .then((tracking) => {
-                if (tracking) {
-                    Location.stopLocationUpdatesAsync(LOCATION_TRACKING);
-                }
-            })
-    }
-return (
-        <View style = {styles.container}>
-                <WebView
-//                style={{
-//                  flex: 1,
-//                  margin: 60,
-//                }}
-                 scalesPageToFit={true}
-                 mixedContentMode="compatibility"
-              onMessage={async (event) => {
-                                   handleEvents(event)
-                                }}
-                source = {{ uri: 'http://10.22.0.66:4200' }}
-                javaScriptEnabledAndroid
-                useWebkit
-                startInLoadingState={true}
-                geolocationEnabled={true}
-                />
-             </View>
-    );
+  return (
+    <View style={styles.container}>
+      <StatusBar
+        hidden={true}
+        backgroundColor="#009edb"
+        showHideTransition={'fade'}
+        animated={true}
+      />
+
+      <WebView
+        scalesPageToFit={true}
+        mixedContentMode="compatibility"
+        onMessage={async (event) => {
+          handleEvents(event);
+        }}
+        originWhitelist={['*']}
+        source={{ uri: URL_WEBVIEW_LOCATION }}
+        javaScriptEnabledAndroid
+        useWebkit
+        startInLoadingState={true}
+        geolocationEnabled={true}
+        allowsFullscreenVideo={true}
+        domStorageEnabled={true}
+        thirdPartyCookiesEnabled={true}
+        sharedCookiesEnabled={true}
+        renderLoading={() => (
+          <ActivityIndicator
+            color="#009edb"
+            size="large"
+            style={styles.activityIndicatorStyle}
+          />
+        )}
+      />
+    </View>
+  );
 }
 const styles = StyleSheet.create({
-   container: {
-      height: 1000,
-   }
-})
-TaskManager.defineTask(LOCATION_TRACKING, async ({ data, error }) => {
-    if (error) {
-        console.log('LOCATION_TRACKING task ERROR:', error);
-        return;
-    }
-    if (data) {
-        const { locations } = data;
-        let lat = locations[0].coords.latitude;
-        let long = locations[0].coords.longitude;
-        await onLocation( locations[0]);
-console.log(
-            `${new Date(Date.now()).toLocaleString()}: ${lat},${long}`
-        );
-    }
+  container: {
+    flex: 1,
+    height: 100,
+    background: '#009edb',
+  },
+  activityIndicatorStyle: {
+    flex: 1,
+    position: 'absolute',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    marginTop: 'auto',
+    marginBottom: 'auto',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
 });
+
+const onSendTracking = async (position) => {
+  if (position) {
+    try {
+      let baseURL = `${URL_LOCATION_TRACKING}?lat=${position.coords.latitude}&long=${position.coords.longitude}`;
+      return await fetch(baseURL);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+};
+
+const onStateTracking = async (state) => {
+  try {
+    let baseURL = `${URL_LOCATION_TRACKING}?state=${state}`;
+    return await fetch(baseURL);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+TaskManager.defineTask(
+  LOCATION_TRACKING,
+  async ({ data: { locations }, error }) => {
+    if (error) {
+      console.log('LOCATION_TRACKING task ERROR:', error);
+      return;
+    }
+    if (locations && locations.length > 0) {
+      var position = [...locations].shift();
+      console.log('LOCATION_TRACKING task OK');
+
+      console.log(
+        `${new Date(Date.now()).toLocaleString()}: ${
+          position.coords.latitude
+        },${position.coords.longitude}`
+      );
+      onSendTracking(position);
+    }
+  }
+);
+
 export default UserLocation;

@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 2.7.0"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "buildConfiguration": "Debug"
+      },
+      "env": {
+        "URL_WEBVIEW_LOCATION": "http://10.22.0.66:4200"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "URL_WEBVIEW_LOCATION": "http://10.22.0.66:4200"
+      }
+    },
+    "production": {
+      "env": {
+        "URL_WEBVIEW_LOCATION": "http://10.22.0.66:4200"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

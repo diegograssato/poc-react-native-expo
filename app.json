@@ -21,7 +21,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.AwesomeProject",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -30,12 +33,20 @@
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE"
       ],
       "package": "com.anonymous.AwesomeProject"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d70736d3-462b-44da-8737-5eead2a8303f"
+      }
     }
   }
 }
