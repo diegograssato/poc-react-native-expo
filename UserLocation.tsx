@@ -11,6 +11,7 @@ import * as TaskManager from 'expo-task-manager';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import AuthController from './src/infrastructure/controllers/AuthControler';
 
 const LOCATION_TRACKING = 'location-tracking';
 const URL_LOCATION_TRACKING = 'https://dtux-lab-15.free.beeceptor.com';
@@ -19,7 +20,8 @@ const STORAGE_KEY = '@StorageLocationTracking';
 
 function UserLocation() {
   const appState = useRef(AppState.currentState);
-  
+
+  /** Migrado */
   const startLocationTracking = async () => {
     console.log('[startLocationTracking]');
 
@@ -39,10 +41,10 @@ function UserLocation() {
       LOCATION_TRACKING
     );
 
-    //setLocationStarted(hasStarted);
     console.log('tracking started?', hasStarted);
   };
 
+  /** Migrado */
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
@@ -53,6 +55,7 @@ function UserLocation() {
     };
   }, []);
   useEffect(() => {
+    /** Migrado */
     const config = async () => {
       let resf = await Location.requestForegroundPermissionsAsync();
       let resb = await Location.requestBackgroundPermissionsAsync();
@@ -65,6 +68,8 @@ function UserLocation() {
 
     config();
   }, []);
+
+  /** Migrado */
   const _handleAppStateChange = async (nextAppState) => {
     if (
       appState.current.match(/inactive|background/) &&
@@ -76,7 +81,7 @@ function UserLocation() {
     appState.current = nextAppState;
     console.log('AppState', appState.current);
   };
-
+  /** Migrado parcialmente */
   async function handleEvents(event) {
     console.log('\n[handleEvents]');
     const responseBody = JSON.parse(event.nativeEvent.data);
@@ -111,7 +116,7 @@ function UserLocation() {
         console.log(`Sorry, we are out of ${responseBody.event}.`);
     }
   }
-
+  /** Migrado */
   const stopLocation = () => {
     TaskManager.isTaskRegisteredAsync(LOCATION_TRACKING).then((tracking) => {
       if (tracking) {
@@ -180,8 +185,10 @@ const styles = StyleSheet.create({
 const onSendTracking = async (position) => {
   if (position) {
     try {
-      let baseURL = `${URL_LOCATION_TRACKING}?lat=${position.coords.latitude}&long=${position.coords.longitude}`;
-      return await fetch(baseURL);
+      const authController = new AuthController();
+      authController.login("diego", "anna");
+      //let baseURL = `${URL_LOCATION_TRACKING}?lat=${position.coords.latitude}&long=${position.coords.longitude}`;
+      //return await fetch(baseURL);
     } catch (error) {
       console.error(error);
     }
@@ -196,7 +203,7 @@ const onStateTracking = async (state) => {
     console.error(error);
   }
 };
-
+/** Migrado */
 TaskManager.defineTask(
   LOCATION_TRACKING,
   async ({ data: { locations }, error }) => {
@@ -206,8 +213,6 @@ TaskManager.defineTask(
     }
     if (locations && locations.length > 0) {
       var position = [...locations].shift();
-      console.log('LOCATION_TRACKING task OK');
-
       console.log(
         `${new Date(Date.now()).toLocaleString()}: ${
           position.coords.latitude

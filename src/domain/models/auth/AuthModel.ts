@@ -1,4 +1,4 @@
-export class LoginModel {
+export class AuthModel {
   token: string
 
   login: string

@@ -1,0 +1,10 @@
+{
+  "integration": {
+    "state": false,
+    "type": "vuupt"
+  },
+  "token": {
+    "email": "diego.grassato@gmail.com",
+    "apiKey": "api_key cGbmrRFFAsHBA2KS"
+  }
+}
